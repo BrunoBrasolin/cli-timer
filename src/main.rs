@@ -1,3 +1,8 @@
+mod cli;
+mod commands;
+mod stopwatch;
+mod storage;
+
 fn main() {
-    println!("Hello, world!");
+    cli::run();
 }
