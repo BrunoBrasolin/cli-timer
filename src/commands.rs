@@ -75,6 +75,6 @@ fn format_duration(duration: Duration) -> String {
             hours, minutes, seconds
         )
     } else {
-        format!("{:02}:{:02}", minutes, seconds)
+        format!("00:{:02}:{:02}", minutes, seconds)
     }
 }
