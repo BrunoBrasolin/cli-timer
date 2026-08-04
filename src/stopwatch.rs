@@ -38,10 +38,6 @@ impl Stopwatch {
         self.started_at_ms = None;
     }
 
-    pub fn stop(&mut self) {
-        self.pause();
-    }
-
     pub fn reset(&mut self) {
         self.elapsed_ms = 0;
         self.running = false;

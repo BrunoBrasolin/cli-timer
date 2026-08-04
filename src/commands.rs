@@ -34,11 +34,12 @@ pub fn execute(command: Command, stopwatch: &mut Stopwatch) {
 
         Command::Stop => {
             if stopwatch.is_running() {
-                stopwatch.stop();
+                stopwatch.pause();
                 println!(
                     "■ Stopwatch stopped. Total time: {}",
                     format_duration(stopwatch.elapsed())
                 );
+                stopwatch.reset();
             } else {
                 println!("No stopwatch is running.");
             }
@@ -70,10 +71,7 @@ fn format_duration(duration: Duration) -> String {
     let seconds = total_seconds % 60;
 
     if hours > 0 {
-        format!(
-            "{:02}:{:02}:{:02}",
-            hours, minutes, seconds
-        )
+        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
     } else {
         format!("00:{:02}:{:02}", minutes, seconds)
     }
