@@ -16,7 +16,10 @@ pub fn execute(command: Command, stopwatch: &mut Stopwatch) {
                 println!("The stopwatch is already running.");
             } else {
                 stopwatch.start();
-                println!("▶ Stopwatch started.");
+                println!(
+                    "▶ Stopwatch started. Elapsed: {}",
+                    format_duration(stopwatch.elapsed())
+                );
             }
         }
 
