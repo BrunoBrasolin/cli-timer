@@ -1,68 +1,125 @@
 use crate::stopwatch::Stopwatch;
+use std::collections::HashMap;
 use std::time::Duration;
 
 pub enum Command {
-    Start,
-    Pause,
-    Stop,
-    Status,
-    Reset,
+    Start { name: String },
+    Pause { name: String },
+    Stop { name: String },
+    Status { name: Option<String> },
+    Reset { name: String },
+    Delete { name: String },
+    List,
 }
 
-pub fn execute(command: Command, stopwatch: &mut Stopwatch) {
+pub fn execute(command: Command, stopwatches: &mut HashMap<String, Stopwatch>) {
     match command {
-        Command::Start => {
+        Command::Start { name } => {
+            let stopwatch = stopwatches.entry(name.clone()).or_insert_with(Stopwatch::new);
             if stopwatch.is_running() {
-                println!("The stopwatch is already running.");
+                println!("The stopwatch '{}' is already running.", name);
             } else {
                 stopwatch.start();
                 println!(
-                    "▶ Stopwatch started. Elapsed: {}",
+                    "▶ Stopwatch '{}' started. Elapsed: {}",
+                    name,
                     format_duration(stopwatch.elapsed())
                 );
             }
         }
 
-        Command::Pause => {
-            if stopwatch.is_running() {
-                stopwatch.pause();
-                println!(
-                    "⏸ Stopwatch paused. Elapsed: {}",
-                    format_duration(stopwatch.elapsed())
-                );
+        Command::Pause { name } => {
+            if let Some(stopwatch) = stopwatches.get_mut(&name) {
+                if stopwatch.is_running() {
+                    stopwatch.pause();
+                    println!(
+                        "⏸ Stopwatch '{}' paused. Elapsed: {}",
+                        name,
+                        format_duration(stopwatch.elapsed())
+                    );
+                } else {
+                    println!("The stopwatch '{}' is already paused.", name);
+                }
             } else {
-                println!("The stopwatch is already paused.");
+                println!("No stopwatch found with name '{}'.", name);
             }
         }
 
-        Command::Stop => {
-            if stopwatch.is_running() {
-                stopwatch.pause();
-                println!(
-                    "■ Stopwatch stopped. Total time: {}",
-                    format_duration(stopwatch.elapsed())
-                );
+        Command::Stop { name } => {
+            if let Some(stopwatch) = stopwatches.get_mut(&name) {
+                if stopwatch.is_running() {
+                    stopwatch.pause();
+                    println!(
+                        "■ Stopwatch '{}' stopped. Total time: {}",
+                        name,
+                        format_duration(stopwatch.elapsed())
+                    );
+                    stopwatch.reset();
+                } else {
+                    println!("Stopwatch '{}' is not running.", name);
+                }
+            } else {
+                println!("No stopwatch found with name '{}'.", name);
+            }
+        }
+
+        Command::Status { name } => {
+            if let Some(name) = name {
+                if let Some(stopwatch) = stopwatches.get(&name) {
+                    let status = if stopwatch.is_running() {
+                        "Running"
+                    } else {
+                        "Paused"
+                    };
+                    println!("Name   : {}", name);
+                    println!("Status : {}", status);
+                    println!("Elapsed: {}", format_duration(stopwatch.elapsed()));
+                } else {
+                    println!("No stopwatch found with name '{}'.", name);
+                }
+            } else {
+                print_list(stopwatches);
+            }
+        }
+
+        Command::Reset { name } => {
+            if let Some(stopwatch) = stopwatches.get_mut(&name) {
                 stopwatch.reset();
+                println!("↺ Stopwatch '{}' reset.", name);
             } else {
-                println!("No stopwatch is running.");
+                println!("No stopwatch found with name '{}'.", name);
             }
         }
 
-        Command::Status => {
-            let status = if stopwatch.is_running() {
-                "Running"
+        Command::Delete { name } => {
+            if stopwatches.remove(&name).is_some() {
+                println!("🗑 Stopwatch '{}' deleted.", name);
             } else {
-                "Paused"
-            };
-
-            println!("Status : {}", status);
-            println!("Elapsed: {}", format_duration(stopwatch.elapsed()));
+                println!("No stopwatch found with name '{}'.", name);
+            }
         }
 
-        Command::Reset => {
-            stopwatch.reset();
-            println!("↺ Stopwatch reset.");
+        Command::List => {
+            print_list(stopwatches);
         }
+    }
+}
+
+fn print_list(stopwatches: &HashMap<String, Stopwatch>) {
+    if stopwatches.is_empty() {
+        println!("No stopwatches found.");
+        return;
+    }
+
+    let mut names: Vec<&String> = stopwatches.keys().collect();
+    names.sort();
+
+    println!("{:<15} {:<10} {:<12}", "NAME", "STATUS", "ELAPSED");
+    println!("{}", "-".repeat(37));
+    for name in names {
+        let sw = &stopwatches[name];
+        let status = if sw.is_running() { "Running" } else { "Paused" };
+        println!("{:<15} {:<10} {:<12}", name, status, format_duration(sw.elapsed()));
     }
 }
 

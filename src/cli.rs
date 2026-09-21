@@ -1,12 +1,11 @@
 use crate::{
     commands::{Command, execute},
-    stopwatch::Stopwatch,
     storage,
 };
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "stopwatch", version, about = "A simple sotpwatch CLI")]
+#[command(name = "stopwatch", version, about = "A simple stopwatch CLI")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -14,29 +13,50 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Start,
-    Pause,
-    Stop,
-    Status,
-    Reset,
+    /// Start a stopwatch
+    Start { name: Option<String> },
+    /// Pause a stopwatch
+    Pause { name: Option<String> },
+    /// Stop a stopwatch
+    Stop { name: Option<String> },
+    /// Check status of a stopwatch or list all
+    Status { name: Option<String> },
+    /// Reset a stopwatch
+    Reset { name: Option<String> },
+    /// Delete a stopwatch
+    Delete { name: Option<String> },
+    /// List all stopwatches
+    List,
 }
 
 pub fn run() {
     let cli = Cli::parse();
 
-    let mut stopwatch = storage::load().unwrap_or_else(|_| Stopwatch::new());
+    let mut stopwatches = storage::load_all().unwrap_or_default();
 
     let command = match cli.command {
-        Commands::Start => Command::Start,
-        Commands::Pause => Command::Pause,
-        Commands::Stop => Command::Stop,
-        Commands::Status => Command::Status,
-        Commands::Reset => Command::Reset,
+        Commands::Start { name } => Command::Start {
+            name: name.unwrap_or_else(|| "default".to_string()),
+        },
+        Commands::Pause { name } => Command::Pause {
+            name: name.unwrap_or_else(|| "default".to_string()),
+        },
+        Commands::Stop { name } => Command::Stop {
+            name: name.unwrap_or_else(|| "default".to_string()),
+        },
+        Commands::Status { name } => Command::Status { name },
+        Commands::Reset { name } => Command::Reset {
+            name: name.unwrap_or_else(|| "default".to_string()),
+        },
+        Commands::Delete { name } => Command::Delete {
+            name: name.unwrap_or_else(|| "default".to_string()),
+        },
+        Commands::List => Command::List,
     };
 
-    execute(command, &mut stopwatch);
+    execute(command, &mut stopwatches);
 
-    if let Err(err) = storage::save(&stopwatch) {
-        eprintln!("Failed to save stopwatch: {err}");
+    if let Err(err) = storage::save_all(&stopwatches) {
+        eprintln!("Failed to save stopwatches: {err}");
     }
 }
