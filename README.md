@@ -1,6 +1,8 @@
 # cli-timer
 
-Um cronômetro de terminal escrito em Rust. É possível criar vários cronômetros com nomes diferentes, iniciá-los, pausá-los, consultá-los, zerá-los e removê-los.
+Um cronômetro web escrito em Rust para contar horas de trabalho em projetos diferentes. O programa sobe um pequeno servidor local que serve uma página com uma tabela de todos os cronômetros, onde é possível criar, iniciar, pausar, parar, zerar e remover cada um deles.
+
+O projeto é 100% Rust: o servidor HTTP usa apenas a biblioteca padrão, e a página é gerada pelo próprio programa, sem JavaScript, Node ou arquivos externos.
 
 > Você não precisa conhecer Rust para usar o projeto. Basta instalar o Rust uma vez e seguir os passos abaixo.
 
@@ -87,75 +89,51 @@ Get-Item Cargo.toml
 Na primeira execução, o Cargo baixa as dependências e pode levar alguns minutos. Dentro da pasta do projeto:
 
 ```bash
-cargo run -- list
+cargo run
 ```
 
-Se tudo estiver certo, a saída inicial será:
+Se tudo estiver certo, a saída será:
 
 ```text
-No stopwatches found.
+Stopwatch running at http://127.0.0.1:3000
+Press Ctrl+C to stop.
 ```
 
-O `--` separa as opções do Cargo dos comandos do cronômetro. Ele deve ser mantido nos comandos `cargo run`.
+Abra [http://127.0.0.1:3000](http://127.0.0.1:3000) no navegador. Para encerrar o servidor, pressione `Ctrl+C` no terminal.
 
-## Uso básico
+### Usar outra porta
 
-Sem informar um nome, o programa usa o cronômetro chamado `default`:
-
-```bash
-cargo run -- start
-cargo run -- status
-cargo run -- pause
-cargo run -- stop
-```
-
-Para trabalhar com cronômetros nomeados, informe o nome depois do comando:
-
-```bash
-cargo run -- start estudos
-cargo run -- status estudos
-cargo run -- pause estudos
-cargo run -- reset estudos
-cargo run -- delete estudos
-```
-
-Comandos disponíveis:
-
-| Comando | O que faz |
-| --- | --- |
-| `start [nome]` | inicia um cronômetro; cria-o se necessário |
-| `pause [nome]` | pausa o cronômetro sem perder o tempo acumulado |
-| `stop [nome]` | para e zera o cronômetro |
-| `status [nome]` | mostra um cronômetro específico ou todos |
-| `reset [nome]` | zera o tempo, mas mantém o cronômetro salvo |
-| `delete [nome]` | remove o cronômetro |
-| `list` | lista todos os cronômetros |
-
-Para ver a ajuda completa:
-
-```bash
-cargo run -- --help
-```
-
-### Nomes com espaços
-
-Coloque o nome entre aspas:
+Defina a variável de ambiente `PORT`:
 
 ```bash
 # Linux
-cargo run -- start "leitura diária"
+PORT=8080 cargo run
 
 # Windows PowerShell
-cargo run -- start "leitura diária"
+$env:PORT=8080; cargo run
 ```
+
+O servidor escuta apenas em `127.0.0.1`, ou seja, só pode ser acessado pelo próprio computador.
+
+## Uso
+
+A página mostra uma tabela com todos os cronômetros salvos em `.stopwatch.json`, com nome, estado, tempo decorrido e ações. Os cronômetros em andamento são atualizados na tela a cada segundo. A última linha mostra o total de todos os cronômetros.
+
+Para criar um cronômetro, clique em **+ New timer**, digite o nome e clique em **Create**. Nomes com espaços e acentos funcionam normalmente.
+
+Ações de cada linha:
+
+| Botão | O que faz |
+| --- | --- |
+| **Start** | inicia o cronômetro, continuando do tempo acumulado |
+| **Pause** | pausa o cronômetro sem perder o tempo acumulado |
+| **Stop** | para o cronômetro e zera o tempo |
+| **Reset** | zera o tempo; se o cronômetro estiver rodando, ele continua rodando a partir de zero |
+| **Delete** → **Confirm** | remove o cronômetro (pede confirmação) |
+
+Os cronômetros continuam contando mesmo com a página ou o servidor fechados, pois o arquivo guarda o horário em que cada um foi iniciado.
 
 ## Compilar sem o Cargo executar o programa
-
-Para gerar uma versão de desenvolvimento:
-
-```bash
-cargo build
-```
 
 Para gerar uma versão otimizada para uso normal:
 
@@ -167,24 +145,21 @@ Depois, execute o binário diretamente:
 
 ```bash
 # Linux
-./target/release/cli-timer list
-./target/release/cli-timer start estudos
+./target/release/cli-timer
 
 # Windows PowerShell
-.\target\release\cli-timer.exe list
-.\target\release\cli-timer.exe start estudos
+.\target\release\cli-timer.exe
 ```
-
-Embora o executável se chame `cli-timer`, a ajuda e as mensagens do programa usam o nome `stopwatch`.
 
 ## Onde os dados ficam salvos?
 
-O programa cria o arquivo `.stopwatch.json` na **pasta em que o comando foi executado**. Esse arquivo guarda os nomes, os tempos acumulados e o estado dos cronômetros.
+O programa cria o arquivo `.stopwatch.json` na **pasta em que o servidor foi iniciado**. Esse arquivo guarda os nomes, os tempos acumulados e o estado dos cronômetros.
 
 Por isso:
 
 - execute o programa sempre a partir da pasta do projeto se quiser reutilizar os mesmos dados;
 - não apague `.stopwatch.json` se quiser manter os cronômetros;
+- o arquivo é lido a cada vez que a página é carregada, então alterações manuais aparecem ao recarregar a página;
 - para começar do zero, feche o programa e apague esse arquivo manualmente.
 
 No PowerShell:
@@ -226,11 +201,25 @@ sudo apt install build-essential
 
 Em outras distribuições, instale o equivalente a GCC/Clang, `make` e as bibliotecas padrão de desenvolvimento.
 
+### A porta já está em uso
+
+Se aparecer `Failed to start server on 127.0.0.1:3000`, outro programa já está usando a porta. Use outra, por exemplo `PORT=8080 cargo run`.
+
 ### O cronômetro parece ter sumido
 
-Verifique se o comando está sendo executado em outra pasta. O arquivo `.stopwatch.json` é relativo à pasta atual, não à pasta do código-fonte.
+Verifique se o servidor foi iniciado em outra pasta. O arquivo `.stopwatch.json` é relativo à pasta atual, não à pasta do código-fonte.
 
 ## Desenvolvimento
+
+Estrutura do código:
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `src/main.rs` | lê a porta e inicia o servidor |
+| `src/server.rs` | servidor HTTP e rotas (`GET /`, `POST /timers`, `POST /timers/action`) |
+| `src/page.rs` | gera o HTML e o CSS da página |
+| `src/stopwatch.rs` | regras do cronômetro (iniciar, pausar, parar, zerar) |
+| `src/storage.rs` | leitura e gravação de `.stopwatch.json` |
 
 Para verificar se o código compila:
 

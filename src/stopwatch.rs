@@ -30,7 +30,7 @@ impl Stopwatch {
         }
 
         if let Some(started) = self.started_at_ms {
-            let elapsed = now_ms() - started;
+            let elapsed = now_ms().saturating_sub(started);
             self.elapsed_ms += elapsed as u64;
         }
 
@@ -38,10 +38,19 @@ impl Stopwatch {
         self.started_at_ms = None;
     }
 
-    pub fn reset(&mut self) {
+    /// Stops the stopwatch and clears the accumulated time.
+    pub fn stop(&mut self) {
         self.elapsed_ms = 0;
         self.running = false;
         self.started_at_ms = None;
+    }
+
+    /// Clears the accumulated time; a running stopwatch keeps running from zero.
+    pub fn reset(&mut self) {
+        self.elapsed_ms = 0;
+        if self.running {
+            self.started_at_ms = Some(now_ms());
+        }
     }
 
     pub fn elapsed(&self) -> Duration {
@@ -49,7 +58,7 @@ impl Stopwatch {
 
         if self.running {
             if let Some(started) = self.started_at_ms {
-                total += (now_ms() - started) as u64;
+                total += now_ms().saturating_sub(started) as u64;
             }
         }
 
